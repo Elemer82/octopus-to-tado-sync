@@ -1,44 +1,9 @@
 import argparse
-import requests
-from requests.auth import HTTPBasicAuth
 from PyTado.interface import Tado
-
-
-def get_meter_reading_total_consumption(api_key, mprn, gas_serial_number):
-    """
-    Retrieves total gas consumption from the Octopus Energy API for the given gas meter point and serial number.
-    """
-    url = f"https://api.octopus.energy/v1/gas-meter-points/{mprn}/meters/{gas_serial_number}/consumption/?group_by=quarter"
-    total_consumption = 0.0
-
-    while url:
-        response = requests.get(
-            url, auth=HTTPBasicAuth(api_key, "")
-        )
-
-        if response.status_code == 200:
-            meter_readings = response.json()
-            total_consumption += sum(
-                interval["consumption"] for interval in meter_readings["results"]
-            )
-            url = meter_readings.get("next", "")
-        else:
-            print(
-                f"Failed to retrieve data. Status code: {response.status_code}, Message: {response.text}"
-            )
-            break
-
-    print(f"Total consumption is {total_consumption}")
-    return total_consumption
-
-
-def send_reading_to_tado(username, password, reading):
-    """
-    Sends the total consumption reading to Tado using its Energy IQ feature.
-    """
-    tado = Tado(username, password)
-    result = tado.set_eiq_meter_readings(reading=int(reading))
-    print(result)
+from datetime import datetime, timedelta
+from Octopus_Functions import get_consumption_between_dates
+# from TADO_functions import send_reading_to_tado_with_date
+from logging_functions import create_debug_info_console_logging
 
 
 def parse_args():
@@ -70,10 +35,58 @@ def parse_args():
 if __name__ == "__main__":
     args = parse_args()
 
+    log_obj = create_debug_info_console_logging("sync_octopus_tado")
+
+    tado = Tado(args.tado_email, args.tado_password)
+    result = tado.get_eiq_meter_readings()
+
+    first_date_reading_submitted_to_tado = datetime(year=9999, month=12, day=31)
+    first_reading_submitted_to_tado = 999999999
+
+    last_date_reading_submitted_to_tado = datetime(year=2000, month=1, day=1)
+    last_reading_submitted_to_tado = 0
+    for reading in result["readings"]:
+        this_date = datetime(year=int(reading["date"][:4]),
+                             month=int(reading["date"][5:7]),
+                             day=int(reading["date"][8:]))
+        if this_date > last_date_reading_submitted_to_tado:
+            last_date_reading_submitted_to_tado = this_date
+            last_reading_submitted_to_tado = reading["reading"]
+        # This date needs to be hardcoded for me, as this is the date I was moved from bulb to tado
+        # There is a meter reading submitted for this date in tado as well, so they can synchronise
+        if datetime(year=2023, month=2, day=24) <= this_date < first_date_reading_submitted_to_tado:
+            first_date_reading_submitted_to_tado = this_date
+            first_reading_submitted_to_tado = reading["reading"]
+
+    log_obj.info(f"Last reading submitted to tado on {last_date_reading_submitted_to_tado} was "
+                 f"{last_reading_submitted_to_tado}")
+
+    if (datetime.now() - last_date_reading_submitted_to_tado).days > 30:
+        # We need to just get the consumption between 2 dates
+        to_date = last_date_reading_submitted_to_tado + timedelta(days=30)
+        # With the below we make sure that we get exactly 1 month in advance of the previous reading,
+        # This also takes in account December to January rollover,
+        # TODO Days over 28 are not supported because of February
+        to_date = datetime(year=to_date.year, month=to_date.month, day=last_date_reading_submitted_to_tado.day)
+    else:
+        # We just need to get the consumption from this date onwards
+        to_date = datetime.now()
+    consumption = get_consumption_between_dates(first_date_reading_submitted_to_tado, to_date,
+                                                args.octopus_api_key, args.mprn, args.gas_serial_number, log_obj)
     # Get total consumption from Octopus Energy API
-    consumption = get_meter_reading_total_consumption(
-        args.octopus_api_key, args.mprn, args.gas_serial_number
-    )
+    # consumption = get_meter_reading_total_consumption(args.octopus_api_key, args.mprn, args.gas_serial_number)
+
+    new_reading = int(first_reading_submitted_to_tado + consumption)
+    if new_reading < last_reading_submitted_to_tado:
+        log_obj.warning(f"Something went wrong new reading {new_reading} is lower than the highest reading already "
+                     f"submitted {last_reading_submitted_to_tado}")
+        log_obj.error(f"The current reading can't be less than the previously added reading, "
+                      f"please check the value or date and try again.")
+        log_obj.error(f"Octopus has no data from bulb!!!")
+    else:
+        log_obj.info(f"Submitting new_date {to_date} with new_reading {new_reading}")
+        # send_reading_to_tado_with_date(args.tado_email, args.tado_password, new_reading, to_date)
+        tado.set_eiq_meter_readings(reading=int(new_reading), date=to_date.strftime('%Y-%m-%d'))
 
     # Send the total consumption to Tado
-    send_reading_to_tado(args.tado_email, args.tado_password, consumption)
+    # send_reading_to_tado(args.tado_email, args.tado_password, consumption)
