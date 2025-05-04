@@ -2,42 +2,55 @@ import argparse
 from PyTado.interface import Tado
 from datetime import datetime, timedelta
 from Octopus_Functions import get_consumption_between_dates
-# from TADO_functions import send_reading_to_tado_with_date
-from logging_functions import create_debug_info_console_logging
+from TADO_functions import tado_login
+from logging_functions import create_debug_info_console_logger
+from datetime import date
 
 
 def parse_args():
     """
     Parses command-line arguments for Tado and Octopus API credentials and meter details.
     """
-    parser = argparse.ArgumentParser(
-        description="Tado and Octopus API Interaction Script"
-    )
+    try:
+        parser = argparse.ArgumentParser(
+            description="Tado and Octopus API Interaction Script"
+        )
 
-    # Tado API arguments
-    parser.add_argument("--tado-email", required=True, help="Tado account email")
-    parser.add_argument("--tado-password", required=True, help="Tado account password")
+        # Tado API arguments
+        parser.add_argument("--tado-email", required=True, help="Tado account email")
+        parser.add_argument("--tado-password", required=True, help="Tado account password")
 
-    # Octopus API arguments
-    parser.add_argument(
-        "--mprn",
-        required=True,
-        help="MPRN (Meter Point Reference Number) for the gas meter",
-    )
-    parser.add_argument(
-        "--gas-serial-number", required=True, help="Gas meter serial number"
-    )
-    parser.add_argument("--octopus-api-key", required=True, help="Octopus API key")
-
-    return parser.parse_args()
+        # Octopus API arguments
+        parser.add_argument(
+            "--mprn",
+            required=True,
+            help="MPRN (Meter Point Reference Number) for the gas meter",
+        )
+        parser.add_argument(
+            "--gas-serial-number", required=True, help="Gas meter serial number"
+        )
+        parser.add_argument("--octopus-api-key", required=True, help="Octopus API key")
+    except argparse.ArgumentError as e:
+        print(f"Error parsing arguments: {e}")
+        parser.print_help()
+        exit(1)
+    except Exception as e:
+        print(f"Unexpected error: {e}")
+        parser.print_help()
+        exit(1)
+        parser.print_help()
+        exit(1) # This line is unreachable, but kept for clarity
+    finally:
+        return parser.parse_args()
 
 
 if __name__ == "__main__":
     args = parse_args()
 
-    log_obj = create_debug_info_console_logging("sync_octopus_tado")
+    log_obj = create_debug_info_console_logger("sync_octopus_tado")
 
-    tado = Tado(args.tado_email, args.tado_password)
+    # tado = Tado(args.tado_email, args.tado_password)
+    tado = tado_login(username=args.tado_email, password=args.tado_password, logger_=log_obj)
     result = tado.get_eiq_meter_readings()
 
     first_date_reading_submitted_to_tado = datetime(year=9999, month=12, day=31)
@@ -54,10 +67,14 @@ if __name__ == "__main__":
             last_reading_submitted_to_tado = reading["reading"]
         # This date needs to be hardcoded for me, as this is the date I was moved from bulb to tado
         # There is a meter reading submitted for this date in tado as well, so they can synchronise
-        if datetime(year=2023, month=2, day=24) <= this_date < first_date_reading_submitted_to_tado:
+        # if datetime(year=2023, month=2, day=24) <= this_date < first_date_reading_submitted_to_tado:
+        # Get the date 2 years ago from today plus 30 days
+        two_years_ago = datetime.now() - timedelta(days=2*365 - 30)
+        if two_years_ago <= this_date < first_date_reading_submitted_to_tado:
             first_date_reading_submitted_to_tado = this_date
             first_reading_submitted_to_tado = reading["reading"]
-
+    log_obj.info(f"Reading submitted to tado on {first_date_reading_submitted_to_tado} was "
+                 f"{first_reading_submitted_to_tado} this was about 2 years ago")
     log_obj.info(f"Last reading submitted to tado on {last_date_reading_submitted_to_tado} was "
                  f"{last_reading_submitted_to_tado}")
 
@@ -71,6 +88,8 @@ if __name__ == "__main__":
     else:
         # We just need to get the consumption from this date onwards
         to_date = datetime.now()
+    log_obj.debug(f"Getting consumption between {first_date_reading_submitted_to_tado} and {to_date}")
+    # Get consumption from Octopus Energy API
     consumption = get_consumption_between_dates(first_date_reading_submitted_to_tado, to_date,
                                                 args.octopus_api_key, args.mprn, args.gas_serial_number, log_obj)
     # Get total consumption from Octopus Energy API
