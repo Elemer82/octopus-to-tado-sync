@@ -3,7 +3,7 @@ from datetime import datetime
 import logging
 from playwright.async_api import async_playwright
 from PyTado.interface import Tado
-
+from logging_functions import create_debug_info_console_logger
 
 def send_reading_to_tado(username: str, password: str, reading: int = 0):
     """
@@ -112,3 +112,15 @@ def tado_login(username: str, password: str, logger_: logging.Logger = logging.g
         logger_.info(f"Login status is {status}")
 
     return tado
+
+
+if __name__ == '__main__':
+    print("This module is not intended to be run directly. Please use it as a library.")
+    log_obj = create_debug_info_console_logger("tado_functions")
+    tado = tado_login(username="user", password="password", logger_=log_obj)
+    # print(tado_login)
+    print(tado)
+    log_obj.debug(tado.get_air_comfort())
+
+
+
