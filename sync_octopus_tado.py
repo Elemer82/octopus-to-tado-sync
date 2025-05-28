@@ -11,11 +11,10 @@ def parse_args():
     """
     Parses command-line arguments for Tado and Octopus API credentials and meter details.
     """
-    try:
-        parser = argparse.ArgumentParser(
+    parser = argparse.ArgumentParser(
             description="Tado and Octopus API Interaction Script"
         )
-
+    try:
         # Tado API arguments
         parser.add_argument("--tado-email", required=True, help="Tado account email")
         parser.add_argument("--tado-password", required=True, help="Tado account password")

@@ -5,7 +5,7 @@ from playwright.async_api import async_playwright
 from PyTado.interface import Tado
 
 
-def send_reading_to_tado(username, password, reading):
+def send_reading_to_tado(username: str, password: str, reading: int = 0):
     """
     Sends the total consumption reading to Tado using its Energy IQ feature.
     """
@@ -16,7 +16,7 @@ def send_reading_to_tado(username, password, reading):
 
 
 def send_reading_to_tado_with_date(username: str, password: str, reading: int = 0,
-                                   date: datetime = datetime.now().strftime('%Y-%m-%d')):
+                                   date: datetime = datetime.now()):
     """
     Sends the consumption reading to Tado using its Energy IQ feature.
     """
@@ -27,7 +27,7 @@ def send_reading_to_tado_with_date(username: str, password: str, reading: int = 
     print(result)
 
 
-async def browser_login(url: str, username: str, password: str, logger_: logging = logging.getLogger()):
+async def browser_login(url: str, username: str, password: str, logger_: logging.Logger = logging.getLogger()):
     """
     Perform the login process using Playwright.
     This function will open a browser, navigate to the login page,
@@ -84,13 +84,14 @@ async def browser_login(url: str, username: str, password: str, logger_: logging
     
 
 
-def tado_login(username: str, password: str, logger_: logging = logging.getLogger()) -> Tado:
+def tado_login(username: str, password: str, logger_: logging.Logger = logging.getLogger()) -> Tado:
     """
     Login to Tado using the provided username and password.
     If the login is successful, it returns a Tado object.
     If the login is pending, it will prompt the user to complete the login process.
     """
     logger_.info(f"Logging in to Tado...")
+    url = "https://my.tado.com/en-GB/login"
 
     tado = Tado(token_file_path="tado_refresh_token")
 
@@ -99,7 +100,7 @@ def tado_login(username: str, password: str, logger_: logging = logging.getLogge
     if status == "PENDING":
         url = tado.device_verification_url()
 
-        asyncio.run(browser_login(url, username, password))
+        asyncio.run(browser_login(url=str(url), username=username, password=password))
 
         tado.device_activation()
 

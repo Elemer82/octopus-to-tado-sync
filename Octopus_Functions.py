@@ -4,7 +4,7 @@ from requests.auth import HTTPBasicAuth
 from datetime import datetime
 
 
-def get_meter_reading_total_consumption(api_key: str, mprn: str, gas_serial_number: str, logger_: logging = logging.getLogger()) -> int:
+def get_meter_reading_total_consumption(api_key: str, mprn: str, gas_serial_number: str, logger_: logging.Logger = logging.getLogger()) -> float:
     """
     Retrieves total gas consumption from the Octopus Energy API for the given gas meter point and serial number.
     """
@@ -34,7 +34,7 @@ def get_meter_reading_total_consumption(api_key: str, mprn: str, gas_serial_numb
 
 
 def get_consumption_between_dates(period_from: datetime, period_to: datetime,
-                                  api_key: str, mprn: str, gas_serial_number: str, logger_: logging = logging.getLogger()) -> int:
+                                  api_key: str, mprn: str, gas_serial_number: str, logger_: logging.Logger = logging.getLogger()) -> float:
     """
     Retrieves total gas consumption from the Octopus Energy API for the given gas meter point and serial number.
     """
@@ -65,7 +65,7 @@ def get_consumption_between_dates(period_from: datetime, period_to: datetime,
     return total_consumption
 
 
-def get_consumption_from_date(period_from: datetime, api_key: str, mprn: str, gas_serial_number: str, logger_: logging = logging.getLogger()) -> int:
+def get_consumption_from_date(period_from: datetime, api_key: str, mprn: str, gas_serial_number: str, logger_: logging.Logger = logging.getLogger()) -> float:
     """
     Retrieves total gas consumption from the Octopus Energy API for the given gas meter point and serial number.
     """

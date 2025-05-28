@@ -42,7 +42,7 @@ def create_debug_info_console_logger(file_str: str) -> logging.Logger:
     :param file_str: uses thi string to specify what the output file should be named
     :return: An object of type logging
     """
-    logger_ = None
+    logger_ = logging.getLogger(__name__)
     try:
         print(inspect.stack()[0][3]) # function_name
         logger_ = logging.getLogger(__name__)
@@ -77,7 +77,7 @@ def create_debug_info_console_logger(file_str: str) -> logging.Logger:
         print(message)
     finally:
         return logger_
-
+    
 
 def create_console_file_tkinter_logger(file_str: str, tkinter_text) -> logging.Logger:
     """
@@ -85,7 +85,7 @@ def create_console_file_tkinter_logger(file_str: str, tkinter_text) -> logging.L
     :param file_str: uses thi string to specify what the output file should be named
     :return: An object of type logging
     """
-    logger_ = None
+    logger_ = logging.getLogger(__name__)
     try:
         print(inspect.stack()[0][3]) # function_name
         logger_ = logging.getLogger(__name__)
