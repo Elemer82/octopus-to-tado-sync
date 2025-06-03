@@ -5,6 +5,7 @@ from playwright.async_api import async_playwright
 from PyTado.interface import Tado
 from logging_functions import create_debug_info_console_logger
 
+
 def send_reading_to_tado(username: str, password: str, reading: int = 0):
     """
     Sends the total consumption reading to Tado using its Energy IQ feature.

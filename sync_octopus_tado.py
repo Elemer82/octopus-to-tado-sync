@@ -1,5 +1,4 @@
 import argparse
-from PyTado.interface import Tado
 from datetime import datetime, timedelta
 from Octopus_Functions import get_consumption_between_dates
 from TADO_functions import tado_login

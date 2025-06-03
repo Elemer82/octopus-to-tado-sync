@@ -1,3 +1,8 @@
+"""
+This module provides functions to create a logging object that can log to both console and a Tkinter Text widget.
+2025-06-03 - Created by Elemer Gazda
+"""
+
 # Built-in modules
 import inspect
 import logging
